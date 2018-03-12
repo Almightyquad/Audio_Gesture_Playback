@@ -1,0 +1,1 @@
+The first TXT file in the recordings is a fluke. Remove "Recordinghead1", "Recordingleft1", "Recordingright1" and decrement all the numbers of the rest of the files.
