@@ -73,4 +73,45 @@ public class IOScript {
         //Just toss the data into the root folder. No clutter.
         File.WriteAllText("Assets/GestureData/RecordingsTemp/Recording" + fileName + recordingIndex + ".txt", tempString);
     }
+
+    public void readVectors(StreamReader reader, ref List<Vector3> posVectorList, ref List<Vector3> rotVectorList, ref List<float> timesList, ref string timestamp)
+    {
+        string text = " ";
+        //Need to clear the vector list
+        posVectorList = new List<Vector3>();
+        rotVectorList = new List<Vector3>();
+        timesList = new List<float>();
+        string[] stringList;
+
+        //Read first line and get timestamp
+        timestamp = reader.ReadLine();
+
+        //Read the rest of the file
+        text = reader.ReadToEnd();
+        //Split the file into every recording event
+        stringList = text.Split('\n');
+        //Get the length of the arrays needed, the file contains position, rotation and delta time in one file. These are equally long.
+        int lengthOfArrays = (stringList.Length - 1) / 3;
+        string[] tempStrList;
+        for (int i = 0; i < stringList.Length - 1; i++)
+        {
+            //Get the positions
+            if (i < lengthOfArrays)
+            {
+                tempStrList = stringList[i].Split(',');
+                posVectorList.Add(new Vector3(float.Parse(tempStrList[0]), float.Parse(tempStrList[1]), float.Parse(tempStrList[2])));
+            }
+            //Get the rotations
+            else if (i >= lengthOfArrays && i < lengthOfArrays * 2)
+            {
+                tempStrList = stringList[i].Split(',');
+                rotVectorList.Add(new Vector3(float.Parse(tempStrList[0]), float.Parse(tempStrList[1]), float.Parse(tempStrList[2])));
+            }
+            //Get the delta times
+            else
+            {
+                timesList.Add(float.Parse(stringList[i]));
+            }
+        }
+    }
 }

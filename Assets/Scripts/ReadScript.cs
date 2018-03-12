@@ -5,92 +5,137 @@ using System.IO;
 using UnityEngine;
 
 public class ReadScript : MonoBehaviour {
-    bool done = false;
+
+    IOScript ios;
 
     FileInfo sourceFile;
     StreamReader fileReader;
 
-    List<Vector3> vectorList;
+    List<PlaybackEvent> playbackEvents;
 
-    List<Vector3> posVectorList;
-    List<Vector3> rotVectorList;
-    List<float> timesList;
+    //Which recording
+    int recordingNumber;
 
-    string timestamp;
-    int counter = 0;
-    GameObject controllerDummy;
+    //Which recordingEventNumber
+    int recordingEventNumber;
+
+    class PlaybackEvent
+    {
+        //TODO: Might be better to create an instance of the object with specifications
+        GameObject playbackGameObject;
+        public PlaybackVariables vars;
+        public int counter;
+        string timestamp;
+        //Needs the game objects name
+        public PlaybackEvent(string objectName, StreamReader reader, string assetName, IOScript ios)
+        {
+            playbackGameObject = GameObject.Find(objectName);
+            vars = new PlaybackVariables();
+            vars.posVectorList = new List<Vector3>();
+            vars.rotVectorList = new List<Vector3>();
+            vars.timesList = new List<float>();
+            counter = 0;
+            readData(reader, assetName, ios);
+        }
+
+        public void updateObject()
+        {
+            playbackGameObject.transform.position = vars.posVectorList[counter];
+            playbackGameObject.transform.eulerAngles = vars.rotVectorList[counter];
+            //TODO: Counter should probably be shared
+            counter++;
+        }
+        //TODO: Currently Empty
+        public void resetObject()
+        { }
+
+        void readData(StreamReader reader, string assetName, IOScript ios)
+        {
+            FileInfo sourceFile;
+            sourceFile = new FileInfo(assetName);
+            reader = sourceFile.OpenText();
+            ios.readVectors(reader, ref vars.posVectorList, ref vars.rotVectorList, ref vars.timesList, ref timestamp);
+            reader.Close();
+        }
+
+        public struct PlaybackVariables
+        {
+            public List<Vector3> posVectorList;
+            public List<Vector3> rotVectorList;
+            public List<float> timesList;
+        }
+    }
+
     // Use this for initialization
     void Start () {
-
-        vectorList = new List<Vector3>();
-        posVectorList = new List<Vector3>();
-        rotVectorList = new List<Vector3>();
-
-        timesList = new List<float>();
-        sourceFile = new FileInfo("Assets/GestureData/Recording1/recordingright5.txt");
-        fileReader = sourceFile.OpenText();
-        readVectors(fileReader, ref vectorList, ref timestamp);
-        controllerDummy = GameObject.Find("Controller (dummy)");
+        recordingNumber = 1;
+        recordingEventNumber = 1;
+        ios = new IOScript();
+        newPlayback();
     }
 	
+    void newPlayback()
+    {
+        playbackEvents = new List<PlaybackEvent>();
+        playbackEvents.Add(new PlaybackEvent("Controller (dummyright)", fileReader, "Assets/GestureData/Recording" + recordingNumber + "/recordingright" + recordingEventNumber + ".txt", ios));
+        playbackEvents.Add(new PlaybackEvent("Controller (dummyleft)", fileReader, "Assets/GestureData/Recording" + recordingNumber + "/recordingleft" + recordingEventNumber + ".txt", ios));
+        playbackEvents.Add(new PlaybackEvent("Controller (head)", fileReader, "Assets/GestureData/Recording" + recordingNumber + "/recordinghead" + recordingEventNumber + ".txt", ios));
+    }
+
 	// Update is called once per frame
 	void Update () {
-        if (counter < posVectorList.Count)
+        if (playbackEvents[0].counter < playbackEvents[0].vars.posVectorList.Count)
         {
-            controllerDummy.transform.position = posVectorList[counter];
-            controllerDummy.transform.eulerAngles = rotVectorList[counter];
-            counter++;
-
+            playbackEvents[0].updateObject();
+            playbackEvents[1].updateObject();
+            playbackEvents[2].updateObject();
         }
-	}
 
-    void readVectors(StreamReader reader, ref List<Vector3> vectorList, ref string timestamp)
-    {
-        string text = " ";
-        vectorList = new List<Vector3>();
-        string[] stringList;
-
-        timestamp = reader.ReadLine();
-
-        //Not very proud of this while setup -.-
-        while (!done)
+        if(Input.GetKeyUp(KeyCode.LeftArrow))
         {
-            text = reader.ReadToEnd();
-            stringList = text.Split('\n');
-            int lengthOfArrays = (stringList.Length - 1) / 3;
-            string[] tempStrList;
-            for (int i = 0; i < stringList.Length - 1; i++)
+            recordingEventNumber--;
+            //Hacky
+            if (recordingEventNumber == 0)
             {
-                if(i < lengthOfArrays)
-                {
-                    tempStrList = stringList[i].Split(',');
-                    posVectorList.Add(new Vector3(float.Parse(tempStrList[0]), float.Parse(tempStrList[1]), float.Parse(tempStrList[2])));
-                }
-                else if (i >= lengthOfArrays && i < lengthOfArrays * 2)
-                {
-                    tempStrList = stringList[i].Split(',');
-                    rotVectorList.Add(new Vector3(float.Parse(tempStrList[0]), float.Parse(tempStrList[1]), float.Parse(tempStrList[2])));
-                }
-                else
-                {
-                    timesList.Add(float.Parse(stringList[i]));
-                }
+                recordingEventNumber++;
             }
-            /*if ((text = reader.ReadLine()) != null)
-            {
-                //text.Split is so useful! Love that method.
-                stringList = text.Split(',');
-                vectorList.Add(new Vector3(float.Parse(stringList[0]), float.Parse(stringList[1]), float.Parse(stringList[2])));
-            }
-            else
-            {
-                done = true;
-                Debug.Log(vectorList.Count);
-            }*/
-            done = true;
+            newPlayback();
         }
-        
-        done = false;
+        else if (Input.GetKeyUp(KeyCode.RightArrow))
+        {
+            recordingEventNumber++;
+            //Hacky
+            if (recordingEventNumber == 14)
+            {
+                recordingEventNumber--;
+            }
+            newPlayback();
+        }
+        else if (Input.GetKeyUp(KeyCode.DownArrow))
+        {
+            recordingNumber--;
+            //Hacky
+            if (recordingNumber == 0)
+            {
+                recordingNumber++;
+            }
+            newPlayback();
+        }
+        else if (Input.GetKeyUp(KeyCode.UpArrow))
+        {
+            recordingNumber++;
+            //Hacky
+            if (recordingNumber == 23)
+            {
+                recordingNumber--;
+            }
+            newPlayback();
+        }
+
     }
+
+
+
+    
 
 }
